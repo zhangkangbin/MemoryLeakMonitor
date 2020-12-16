@@ -1,4 +1,5 @@
 package com.memory.monitor
+
 import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
@@ -21,14 +22,17 @@ class MonitorMemory {
     private val TAG = "MonitorMemory"
     private val queue = ReferenceQueue<Any>()
     private val retainedKeys = mutableMapOf<String, KeyedWeakReference>()
+
+    //这块应该用线程池，简单起见，没写。
     private fun watchActivity(application: Application, weakReference: KeyedWeakReference) {
         removeWeaklyReachableObjects()
         //运行GC
         runGC()
         removeWeaklyReachableObjects()
+        //2次尝试查看这对象是否已被回收，回收了就从retainedKeys移除，否则证明这个对象泄漏了。
         if (retainedKeys.contains(weakReference.key)) {
             //activity 泄漏
-            Log.d(TAG, "-----泄漏activity leak----$weakReference.description::::: Activity${weakReference.get()}" )
+            Log.d(TAG, "-----泄漏:activity leak----$weakReference.description::::: Activity${weakReference.get()}")
             val storageDirectory = File(application.cacheDir.toString() + "/watchActivity")
             if (!storageDirectory.exists()) {
                 storageDirectory.mkdir()
@@ -45,6 +49,7 @@ class MonitorMemory {
                     objectInspectors = AndroidObjectInspectors.appDefaults,
                     metadataExtractor = AndroidMetadataExtractor
                 )
+
                 Log.d(TAG, "\u200B\n分析结果:\u200B\n$analysis");
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -60,6 +65,7 @@ class MonitorMemory {
     }
 
     private fun removeWeaklyReachableObjects() {
+        //如果gc回收了这个对象，这个引用对象会被放到queue中。
         var ref: KeyedWeakReference?
         do {
             ref = queue.poll() as KeyedWeakReference?
@@ -84,7 +90,7 @@ class MonitorMemory {
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {
-                Log.d(TAG, "Destroyed Activity:$activity.javaClass.name" )
+                Log.d(TAG, "Destroyed Activity:$activity.javaClass.name")
                 val key = UUID.randomUUID().toString()
                 val weakReference = KeyedWeakReference(
                     activity,
@@ -93,8 +99,8 @@ class MonitorMemory {
                     SystemClock.uptimeMillis(),
                     queue
                 )
-                retainedKeys[key]=weakReference
-                //五秒后去观察，让 gc 飞一会, 这块应该用线程池，简单起见，就没写了。
+                retainedKeys[key] = weakReference
+                //五秒后去观察，让 gc 飞一会, 这块应该用线程池，简单起见，不写了。
                 Handler().postDelayed(
                     { watchActivity(application, weakReference) },
                     5000
