@@ -2,7 +2,9 @@ package com.memory.monitor
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-
+/**
+ * 模拟内存泄露，用到的类。
+ */
 class TestLeakActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

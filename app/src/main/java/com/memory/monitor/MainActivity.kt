@@ -4,7 +4,6 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import leakcanary.LeakCanary
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,6 +14,5 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.TestLeakMemory).setOnClickListener {
             startActivity(Intent(this,TestLeakActivity::class.java))
         }
-        LeakCanary.config.dumpHeap
     }
 }
