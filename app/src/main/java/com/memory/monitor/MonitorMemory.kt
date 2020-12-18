@@ -23,8 +23,12 @@ class MonitorMemory {
     private val queue = ReferenceQueue<Any>()
     private val retainedKeys = mutableMapOf<String, KeyedWeakReference>()
 
-    //这块应该用线程池，简单起见，没写。
+    /**
+     *这块应该用线程池，简单起见，没写。
+     * KeyedWeakReference 弱引用
+     */
     private fun watchActivity(application: Application, weakReference: KeyedWeakReference) {
+        //判断引用对象是否已达
         removeWeaklyReachableObjects()
         //运行GC
         runGC()
@@ -39,8 +43,10 @@ class MonitorMemory {
             }
             val heapDumpFile = File(storageDirectory, UUID.randomUUID().toString() + ".hprof")
             try {
-                Debug.dumpHprofData(heapDumpFile.absolutePath) //dump 一份内存快照，这里比较慢。
+                //dump 一份堆内存快照，这里比较慢。
+                Debug.dumpHprofData(heapDumpFile.absolutePath)
                 val heapAnalyzer = HeapAnalyzer(OnAnalysisProgressListener.NO_OP)
+                //分析堆内存快照
                 val analysis = heapAnalyzer.analyze(
                     heapDumpFile = heapDumpFile,
                     leakingObjectFinder = KeyedWeakReferenceFinder,
@@ -92,13 +98,7 @@ class MonitorMemory {
             override fun onActivityDestroyed(activity: Activity) {
                 Log.d(TAG, "Destroyed Activity:$activity.javaClass.name")
                 val key = UUID.randomUUID().toString()
-                val weakReference = KeyedWeakReference(
-                    activity,
-                    key,
-                    "描述:" + activity.localClassName,
-                    SystemClock.uptimeMillis(),
-                    queue
-                )
+                val weakReference = KeyedWeakReference(activity, key, "描述:" + activity.localClassName, SystemClock.uptimeMillis(), queue)
                 retainedKeys[key] = weakReference
                 //五秒后去观察，让 gc 飞一会, 这块应该用线程池，简单起见，不写了。
                 Handler().postDelayed(
